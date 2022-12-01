@@ -1,7 +1,7 @@
 import requests, json, datetime, time
 
 username = "shibbbe"
-api = ""
+api = "b4790072a6e549646a5f37d132b67b61"
 
 # def _save(data):
 #     with open("data.json", "w") as f:
@@ -32,7 +32,7 @@ for x in pages:
     re = r.json()
 
     for track in re['recenttracks']['track']:
-        if track['date'] == None:
+        if track.get('date', None) == None:
             continue
         if f"{track['artist']['#text']} - {track['name']}" in data:
             data[f"{track['artist']['#text']} - {track['name']}"].append(track['date']['uts'])
@@ -53,7 +53,8 @@ for track in data:
         
 # Take first 25 tracks with most years, total the amount of plays, then sort by number of average plays per year
 topTracks = {k: sum(v.values()) / len(v) for k, v in sorted(newObj.items(), key=lambda item: sum(item[1].values()), reverse=True)[:25]}
-
+json.dump(topTracks, open("top_tracks.json", 'w+'))
+json.dump(newObj, open("new_obj.json", 'w+'))
 
 for x in topTracks:
     ## If x is empty, skip

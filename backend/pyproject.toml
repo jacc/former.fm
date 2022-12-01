@@ -1,0 +1,31 @@
+[tool.poetry]
+name = "backend"
+version = "0.1.0"
+description = ""
+authors = ["Mustafa Mohamed <git@ms7m.me>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+fastapi = "^0.88.0"
+celery = "^5.2.7"
+redis = "^4.3.5"
+loguru = "^0.6.0"
+proper-env-file = {git = "https://github.com/ms7m/proper_env_file"}
+httpx = "^0.23.1"
+arrow = "^1.2.3"
+pydantic = {extras = ["dotenv"], version = "^1.10.2"}
+
+
+[tool.poetry.group.dev.dependencies]
+black = "^22.10.0"
+pytest = "^7.2.0"
+rich = "^12.6.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 88
+ignore = ["E501"]
