@@ -13,5 +13,6 @@ export default async function handler(
   const queue = await fetch(
     `https://josh.ms7m.me/actions/collection/start/${username}`
   );
-  console.log(queue);
+  const queueJson = await queue.json();
+  res.status(200).json(queueJson);
 }
