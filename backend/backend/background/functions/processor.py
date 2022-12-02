@@ -17,6 +17,7 @@ from celery import current_task
 if typing.TYPE_CHECKING:
     import httpx
     from celery import Task
+    import redis
 
 
 def _process_scrobbles(
@@ -71,8 +72,9 @@ def _generate_meta_state(
 
 
 @background.task(base=HttpClientBase)
-def collect_scrobbles(username: str, process_immediately_after: bool = True, limit_page_collections: int = None) -> dict:
+def collect_scrobbles(username: str, process_immediately_after: bool = True, limit_page_collections: int = 1, limit_page_fetch_total_count_of_tracks: int = 10) -> dict:
     _http = collect_scrobbles.http  # type: httpx.Client
+    _redis = collect_scrobbles.redis  # type: redis.Redis
     _processing_time_start = time.time()
     _current_data = {}  # type: typing.Dict[str, UnprocessedLastFmScrobbles]
 
@@ -94,7 +96,7 @@ def collect_scrobbles(username: str, process_immediately_after: bool = True, lim
                 "user": username,
                 "api_key": return_api_key(),
                 "format": "json",
-                "limit": 1000,
+                "limit": limit_page_fetch_total_count_of_tracks,
             },
         )
         _fetch_user_recent_tracks.raise_for_status()
@@ -224,6 +226,10 @@ def collect_scrobbles(username: str, process_immediately_after: bool = True, lim
     )
 
     if process_immediately_after:
+        try:
+            _redis.delete(username)
+        except Exception:
+            logger.critical(f"Unable to delete redis key {username} -- this may cause users being unable to reprocess their data.")
         logger.debug(
             f"Processing scrobbles for user {username} immediately after collection"
         )
