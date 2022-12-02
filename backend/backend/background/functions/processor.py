@@ -159,7 +159,8 @@ def collect_scrobbles(username: str, process_immediately_after: bool = True, lim
             _page_amount_to_collect = limit_page_collections
         for page in pages[:_page_amount_to_collect]:
             time.sleep(random.uniform(0.5, 1.5))
-            _page_request = _http.get(
+            try:
+                _page_request = _http.get(
                 "/",
                 params={
                     "method": "user.getrecenttracks",
@@ -168,10 +169,32 @@ def collect_scrobbles(username: str, process_immediately_after: bool = True, lim
                     "format": "json",
                     "limit": 1000,
                     "page": page,
-                },
-            )
-            _page_request.raise_for_status()
-            _page_response = _page_request.json()
+                    },
+                )   
+                
+                if _page_request.status_code == 429:
+                    logger.debug("Rate limit hit, sleeping for 30 seconds")
+                    time.sleep(30)
+                    _page_request = _http.get(
+                        "/",
+                        params={
+                            "method": "user.getrecenttracks",
+                            "user": username,
+                            "api_key": return_api_key(),
+                            "format": "json",
+                            "limit": 1000,
+                            "page": page,
+                        },
+                    )
+                if _page_request.status_code == 404:
+                    logger.debug("Page not found.. breaking loop")
+                    break
+                _page_request.raise_for_status()
+                _page_response = _page_request.json()
+            except Exception:
+                logger.exception(f"Failed to fetch page {page} for user {username}")
+                continue
+
             for track in _page_response["recenttracks"]["track"]:
                 if track.get("date", None) is None:
                     logger.debug(
