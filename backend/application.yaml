@@ -3,7 +3,7 @@
 apps:
   - script: /root/.cache/pypoetry/virtualenvs/backend-KZb_1nCG-py3.9/bin/gunicorn
     cwd: /root/former.fm/backend
-    args: -k uvicorn.workers.UvicornWorker uvicorn backend.api.main:app --bind=127.0.0.1:8888
+    args: backend.api.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind=127.0.0.1:8888
     watch: false
     interpreter: /root/.cache/pypoetry/virtualenvs/backend-KZb_1nCG-py3.9/bin/python
     name: "JoshAPI"
