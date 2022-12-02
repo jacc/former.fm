@@ -10,7 +10,7 @@ apps:
 
   - script: /root/.cache/pypoetry/virtualenvs/backend-KZb_1nCG-py3.9/bin/celery
     cwd: /root/former.fm/backend
-    args: -A backend.background.configuration.celery_configuration.background -E
+    args: -A backend.background.configuration.celery_configuration.background worker -E
     interpreter: /root/.cache/pypoetry/virtualenvs/backend-KZb_1nCG-py3.9/bin/python
     name: "JoshCelery"
     watch: false
