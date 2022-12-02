@@ -1,13 +1,28 @@
 from redis.asyncio import Redis
 from fastapi import HTTPException
+from backend.settings.configuration.configuration_file import BackendSettings
 
-redis = Redis(host="localhost", port=6379, db=3)
+
+settings = BackendSettings()
+redis = Redis(
+    host=settings.celery_redis_backend_host,
+    port=settings.celery_redis_backend_port,
+    db=4,
+)
 
 
 async def block_duplicate_requests(username_to_fetch: str):
     """Block duplicate requests."""
-    if await redis.get(username_to_fetch):
-        raise HTTPException(status_code=400, detail="Request already in progress")
+    _fetch_account = await redis.get(username_to_fetch)
+    
+    
+    if _fetch_account:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": "There is already a task running for this account",
+                "task_id": _fetch_account.decode("utf-8"),
+            }
+        )
     else:
-        await redis.set(username_to_fetch, "1", ex=60)
         return username_to_fetch
