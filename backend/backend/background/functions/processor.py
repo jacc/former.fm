@@ -1,4 +1,4 @@
-import time, json, arrow
+import time, json, arrow, random
 from backend.models.tracks import UnprocessedLastFmScrobbles, LastFmTrack
 
 from backend.models.types.arrow_time import ArrowISODatetime
@@ -16,7 +16,7 @@ if typing.TYPE_CHECKING:
 
 def _process_scrobbles(
     incoming_scrobbles_data: typing.Dict[str, UnprocessedLastFmScrobbles]
-):
+) -> typing.Dict[str, LastFmTrack]:
     """Process incoming scrobbles data"""
     
     _processed_scrobbles = {} # type: typing.Dict[str, typing.List[typing.Dict[str, typing.Any]]]
@@ -92,6 +92,9 @@ def collect_scrobbles(username: str, process_immediately_after: bool = True) -> 
     try:
         # Paginate through all pages
         for page in pages:
+            time.sleep(
+                random.uniform(0.5, 1.5)
+            )
             _page_request = _http.get(
                 "/",
                 params={
