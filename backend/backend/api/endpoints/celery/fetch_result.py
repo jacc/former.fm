@@ -11,7 +11,7 @@ router = APIRouter()
 async def fetch_result_from_background(task_id: UUID4):
     logger.debug(f"Fetching result from background for task_id: {task_id}")
     try:
-        _fetch_result = background.AsyncResult(task_id)
+        _fetch_result = background.AsyncResult(str(task_id))
         return CompletedCeleryResult(
             task_id=_fetch_result.id,
             status=_fetch_result.state,
