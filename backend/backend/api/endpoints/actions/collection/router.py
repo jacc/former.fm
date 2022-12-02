@@ -2,18 +2,33 @@ from fastapi import APIRouter, Depends, HTTPException
 from backend.background.functions.processor import collect_scrobbles
 from backend.api.depends.prevent_duplication import block_duplicate_requests, redis
 from loguru import logger
+from .response import (
+    StartUserCollectionResponse,
+    StopUserCollectionResponse,
+    UserAlreadyCollectingResponse,
+)
 
 router = APIRouter(prefix="/collection", tags=["Collection related"])
 
 
-@router.get("/start/{username_to_fetch}")
-async def start_user_collection(
-    username: str = Depends(block_duplicate_requests)
-):
+@router.get(
+    "/start/{username_to_fetch}",
+    responses={
+        200: {
+            "model": StartUserCollectionResponse,
+            "description": "User collection started",
+        },
+        400: {
+            "model": UserAlreadyCollectingResponse,
+            "description": "User is already collecting",
+        },
+    },
+)
+async def start_user_collection(username: str = Depends(block_duplicate_requests)):
     try:
         _run_task = collect_scrobbles.delay(username=username)
         await redis.set(username, _run_task.id)
-        #await redis.set(username, "1")
+        # await redis.set(username, "1")
     except Exception:
         logger.exception("There was a problem with starting the collection")
         raise HTTPException(
@@ -27,7 +42,7 @@ async def start_user_collection(
     }
 
 
-@router.patch("/stop/{username_to_fetch}")
+@router.patch("/stop/{username_to_fetch}", response_model=StopUserCollectionResponse)
 async def stop_user_collection(username_to_fetch: str):
     try:
         _task_id = await redis.get(username_to_fetch)

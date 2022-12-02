@@ -14,6 +14,7 @@ class BackendSettings(BaseSettings):
         env_file = fetch_environment_file
         env_file_encoding = "utf-8"
     
+    
     celery_redis_backend_host: str
     celery_redis_backend_port: int
     celery_redis_backend_db: int
