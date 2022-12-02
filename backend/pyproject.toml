@@ -15,6 +15,7 @@ proper-env-file = {git = "https://github.com/ms7m/proper_env_file"}
 httpx = "^0.23.1"
 arrow = "^1.2.3"
 pydantic = {extras = ["dotenv"], version = "^1.10.2"}
+uvicorn = "^0.20.0"
 
 
 [tool.poetry.group.dev.dependencies]
