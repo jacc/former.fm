@@ -71,7 +71,7 @@ def _generate_meta_state(
 
 
 @background.task(base=HttpClientBase)
-def collect_scrobbles(username: str, process_immediately_after: bool = True) -> dict:
+def collect_scrobbles(username: str, process_immediately_after: bool = True, limit_page_collections: int = None) -> dict:
     _http = collect_scrobbles.http  # type: httpx.Client
     _processing_time_start = time.time()
     _current_data = {}  # type: typing.Dict[str, UnprocessedLastFmScrobbles]
@@ -149,7 +149,13 @@ def collect_scrobbles(username: str, process_immediately_after: bool = True) -> 
                 ),
             )
         )
-        for page in pages[:1]:
+        
+        
+        if limit_page_collections is not None:
+            _page_amount_to_collect = len(pages)
+        else:
+            _page_amount_to_collect = limit_page_collections
+        for page in pages[:_page_amount_to_collect]:
             time.sleep(random.uniform(0.5, 1.5))
             _page_request = _http.get(
                 "/",
