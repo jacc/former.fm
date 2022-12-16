@@ -7,8 +7,40 @@ from .response import (
     StopUserCollectionResponse,
     UserAlreadyCollectingResponse,
 )
+from backend.models.progress import CompletedCeleryResult
+from backend.background.configuration.celery_configuration import background
 
 router = APIRouter(prefix="/collection", tags=["Collection related"])
+
+
+@router.get("/easy/start/{username_to_fetch}", responses=CompletedCeleryResult)
+async def easy_start_user_collection(username_to_fetch: str):
+    try:
+        _check_if_task_already_running = await redis.get(
+            username_to_fetch
+        )  # type: bytes
+        if _check_if_task_already_running:
+            set_task_id = _check_if_task_already_running.decode("utf-8")
+        else:
+            set_task_id = collect_scrobbles.delay(username=username_to_fetch).id
+    except Exception:
+        logger.exception(f"Unable to start/check task for user: {username_to_fetch}")
+        raise HTTPException(status_code=500, detail="There was a problem")
+
+    try:
+        _fetch_result = background.AsyncResult(str(set_task_id))
+        return CompletedCeleryResult(
+            task_id=_fetch_result.id,
+            status=_fetch_result.state,
+            result=_fetch_result.result,
+        )
+    except Exception:
+        logger.exception(
+            f"Failed to fetch result from background for task_id: {set_task_id}"
+        )
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch result from background"
+        )
 
 
 @router.get(

@@ -6,7 +6,6 @@ from backend.models.progress import CompletedCeleryResult
 
 router = APIRouter()
 
-
 @router.get("/fetch/{task_id}", response_model=CompletedCeleryResult)
 async def fetch_result_from_background(task_id: UUID4):
     logger.debug(f"Fetching result from background for task_id: {task_id}")

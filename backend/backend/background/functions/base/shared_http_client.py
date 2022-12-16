@@ -22,6 +22,7 @@ def log_response(response: httpx.Response):
 class HttpClientBase(Task):
     _http_client = None
     _redis_client = None
+    _redis_cache_client = None
 
     @property
     def http(self) -> httpx.Client:
@@ -43,3 +44,14 @@ class HttpClientBase(Task):
                 db=4
             )
         return self._redis_client
+    
+    @property
+    def redis_cache_result(self) -> redis.Redis:
+        if self._redis_cache_client is None:
+            logger.debug("Initializing Redis client for the first time.")
+            self._redis_cache_client = redis.Redis(
+                host=settings.celery_redis_backend_host,
+                port=settings.celery_redis_backend_port,
+                db=2
+            )
+        return self._redis_cache_client

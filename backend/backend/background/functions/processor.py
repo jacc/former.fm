@@ -6,6 +6,8 @@ from backend.models.progress import (
     OptionalTaskMetaInformation,
 )
 from backend.models.types.arrow_time import ArrowISODatetime
+from backend.database.processed_endpoints.sync import SavedDataInformationDB
+from bunnet.operators import Set
 from .base.shared_http_client import HttpClientBase
 from loguru import logger
 from .shared.api_key_rotator import return_api_key
@@ -72,9 +74,15 @@ def _generate_meta_state(
 
 
 @background.task(base=HttpClientBase)
-def collect_scrobbles(username: str, process_immediately_after: bool = True, limit_page_collections: int = 1, limit_page_fetch_total_count_of_tracks: int = 10) -> dict:
+def collect_scrobbles(
+    username: str,
+    process_immediately_after: bool = True,
+    limit_page_collections: int = 1,
+    limit_page_fetch_total_count_of_tracks: int = 10,
+) -> dict:
     _http = collect_scrobbles.http  # type: httpx.Client
     _redis = collect_scrobbles.redis  # type: redis.Redis
+    _result_cache = collect_scrobbles._redis_cache_client  # type: redis.Redis
     _processing_time_start = time.time()
     _current_data = {}  # type: typing.Dict[str, UnprocessedLastFmScrobbles]
 
@@ -85,7 +93,7 @@ def collect_scrobbles(username: str, process_immediately_after: bool = True, lim
             status=BackgroundProcessingStates.STARTING_COLLECTION,
             progress=0,
             meta=OptionalTaskMetaInformation(tracks_collected_so_far=0),
-        )
+        ),
     )
 
     try:
@@ -108,7 +116,7 @@ def collect_scrobbles(username: str, process_immediately_after: bool = True, lim
                 status=BackgroundProcessingStates.STARTING_COLLECTION,
                 progress=0,
                 meta=OptionalTaskMetaInformation(tracks_collected_so_far=0),
-            )
+            ),
         )
     except HTTPStatusError as http_exception:
         logger.exception(
@@ -134,7 +142,7 @@ def collect_scrobbles(username: str, process_immediately_after: bool = True, lim
             meta=OptionalTaskMetaInformation(
                 tracks_collected_so_far=0, estimated_tracks_to_collect=scrobbles
             ),
-        )
+        ),
     )
 
     try:
@@ -149,10 +157,9 @@ def collect_scrobbles(username: str, process_immediately_after: bool = True, lim
                     tracks_collected_so_far=track_collection_count,
                     estimated_tracks_to_collect=scrobbles,
                 ),
-            )
+            ),
         )
-        
-        
+
         if limit_page_collections is not None:
             _page_amount_to_collect = len(pages)
         else:
@@ -161,17 +168,17 @@ def collect_scrobbles(username: str, process_immediately_after: bool = True, lim
             time.sleep(random.uniform(0.5, 1.5))
             try:
                 _page_request = _http.get(
-                "/",
-                params={
-                    "method": "user.getrecenttracks",
-                    "user": username,
-                    "api_key": return_api_key(),
-                    "format": "json",
-                    "limit": 1000,
-                    "page": page,
+                    "/",
+                    params={
+                        "method": "user.getrecenttracks",
+                        "user": username,
+                        "api_key": return_api_key(),
+                        "format": "json",
+                        "limit": 1000,
+                        "page": page,
                     },
-                )   
-                
+                )
+
                 if _page_request.status_code == 429:
                     logger.debug("Rate limit hit, sleeping for 30 seconds")
                     time.sleep(30)
@@ -224,7 +231,7 @@ def collect_scrobbles(username: str, process_immediately_after: bool = True, lim
                         tracks_collected_so_far=track_collection_count,
                         estimated_tracks_to_collect=scrobbles,
                     ),
-                )
+                ),
             )
     except Exception:
         logger.exception(
@@ -245,23 +252,62 @@ def collect_scrobbles(username: str, process_immediately_after: bool = True, lim
                 tracks_collected_so_far=track_collection_count,
                 estimated_tracks_to_collect=scrobbles,
             ),
-        )
+        ),
     )
 
     if process_immediately_after:
         try:
             _redis.delete(username)
         except Exception:
-            logger.critical(f"Unable to delete redis key {username} -- this may cause users being unable to reprocess their data.")
+            logger.critical(
+                f"Unable to delete redis key {username} -- this may cause users being unable to reprocess their data."
+            )
         logger.debug(
             f"Processing scrobbles for user {username} immediately after collection"
         )
         _processed_scrobbles = _process_scrobbles(_current_data)
+
+        try:
+
+            SavedDataInformationDB.find_one({"username": username}).update(
+                Set(
+                    {
+                        SavedDataInformationDB.data: _processed_scrobbles,
+                        SavedDataInformationDB.status: "processed",
+                    }
+                ),
+                on_insert=SavedDataInformationDB(
+                    username=username,
+                    data=_processed_scrobbles,
+                    status="processed",
+                    time=arrow.utcnow().isoformat(),
+                ),
+            )
+        except Exception:
+            logger.exception("unable to save to disk result")
         return {
             "status": "processed",
             "data": _processed_scrobbles,
         }
     else:
+        try:
+
+            SavedDataInformationDB.find_one({"username": username}).update(
+                Set(
+                    {
+                        SavedDataInformationDB.data: _processed_scrobbles,
+                        SavedDataInformationDB.status: "unprocessed",
+                    }
+                ),
+                on_insert=SavedDataInformationDB(
+                    username=username,
+                    data=_processed_scrobbles,
+                    status="unprocessed",
+                    time=arrow.utcnow().isoformat(),
+                ),
+            )
+        except Exception:
+            logger.exception("unable to save to disk result")
         return {
             "status": "unprocessed",
             "data": _current_data,
