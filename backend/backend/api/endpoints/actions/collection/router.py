@@ -13,7 +13,7 @@ from backend.background.configuration.celery_configuration import background
 router = APIRouter(prefix="/collection", tags=["Collection related"])
 
 
-@router.get("/easy/start/{username_to_fetch}", responses=CompletedCeleryResult)
+@router.get("/easy/start/{username_to_fetch}", response_model=CompletedCeleryResult)
 async def easy_start_user_collection(username_to_fetch: str):
     try:
         _check_if_task_already_running = await redis.get(

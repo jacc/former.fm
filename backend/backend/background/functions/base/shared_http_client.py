@@ -46,7 +46,7 @@ class HttpClientBase(Task):
         return self._redis_client
     
     @property
-    def redis_cache_result(self) -> redis.Redis:
+    def redis_cache_result(self):
         if self._redis_cache_client is None:
             logger.debug("Initializing Redis client for the first time.")
             self._redis_cache_client = redis.Redis(
