@@ -10,8 +10,7 @@ export default async function handler(
   res: NextApiResponse<Data>
 ) {
   const { username } = req.query;
-  const queue = await fetch(
-    `https://josh.ms7m.me/actions/collection/start/${username}`
-  );
-  console.log(queue);
+  const queue = await fetch(`https://josh.ms7m.me/celery/fetch/${username}`);
+  const queueJson = await queue.json();
+  res.status(200).json(queueJson);
 }
