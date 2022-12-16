@@ -1,4 +1,3 @@
-// Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import type { NextApiRequest, NextApiResponse } from "next";
 
 type Data = {
@@ -11,7 +10,7 @@ export default async function handler(
 ) {
   const { username } = req.query;
   const queue = await fetch(
-    `https://josh.ms7m.me/actions/collection/start/${username}`
+    `https://josh.ms7m.me/actions/collection/easy/start/${username}`
   );
   const queueJson = await queue.json();
   res.status(200).json(queueJson);

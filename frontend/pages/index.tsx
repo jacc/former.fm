@@ -4,6 +4,7 @@ import toast, { Toaster } from "react-hot-toast";
 import { useEffect, useState } from "react";
 import styles from "../styles/Home.module.css";
 import Profile from "./components/profile";
+import Card from "./components/notification";
 const navigation = [
   { name: "Solutions", href: "#" },
   { name: "Pricing", href: "#" },
@@ -13,69 +14,45 @@ const navigation = [
 
 export default function Home() {
   const [username, setUsername] = useState("");
-  const [queueID, setQueueID] = useState("");
-  const [status, setStatus] = useState({});
   const [lastFmData, setLastFmData] = useState({});
-  const [dataLoaded, setDataLoaded] = useState(false);
 
-  async function fetchQueue() {
-    const response = await fetch(`/api/queue/${username}`);
-    console.log(response);
-    const data = await response.json();
-    return data;
-  }
-
-  async function fetchStatus(id: string) {
-    const response = await fetch(`/api/status/${id}`);
+  async function getUser() {
+    const response = await fetch(`/api/${username}`);
     const data = await response.json();
     return data;
   }
 
   useEffect(() => {
-    if (queueID != "") {
-      setTimeout(() => {
-        console.log("sleeping");
-        fetchStatus(queueID).then((data) => {
-          if (data.status === "SUCCESS") {
-            setQueueID("");
-            setLastFmData(data.result);
-          } else {
-            setQueueID(data.id);
-          }
-        });
-      }, 500);
-    }
+    // if (queueID != "") {
+    //   setTimeout(() => {
+    //     console.log("sleeping");
+    //     fetchStatus(queueID).then((data) => {
+    //       if (data.status === "SUCCESS") {
+    //         setQueueID("");
+    //         setLastFmData(data.result);
+    //       } else {
+    //         setQueueID(data.id);
+    //       }
+    //     });
+    //   }, 500);
+    // }
   });
 
   async function handleSubmit(e) {
-    // fuck your types
     e.preventDefault();
 
-    console.log("bruh");
+    const data = await getUser();
+    console.log(data);
 
-    const queue = await fetchQueue();
-
-    console.log(queue);
-
-    if (queue.status === "PENDING") {
-      setQueueID(queue.id);
-      toast.success("You're in the queue to get analyzed! Please wait.", {});
-    } else if (queue.detail.message) {
-      console.log("Already in the queue, check if it's done.");
-      const checkStatus = await fetchStatus(queue.detail.task_id);
-      if (checkStatus.status === "SUCCESS") {
-        console.log("Their data is done, pull it in!");
-        setQueueID("");
-        setLastFmData(checkStatus.result);
-      } else {
-        console.log("Data not done, deploy toast...");
-        toast.loading("We're still analyzing! Please wait.", {});
-      }
-    } else if (queue.status === "SUCCESS") {
-      const checkStatus = await fetchStatus(queue.detail.task_id);
-      console.log(checkStatus);
-      setQueueID("");
-      setLastFmData(queue.result);
+    switch (data.status) {
+      case "SUCCESS":
+        setLastFmData(data.result);
+        break;
+      case "PROGRESS":
+        toast.loading("Your data is being processed! ");
+        break;
+      case "PENDING":
+        toast.success("You've been put into the queue!");
     }
   }
 
@@ -145,6 +122,14 @@ export default function Home() {
               </button>
             </form>
             <Profile data={lastFmData} />
+            <div className="space-y-2 mt-2">
+              <Card data={lastFmData} />
+              <Card data={lastFmData} />
+              <Card data={lastFmData} />
+              <Card data={lastFmData} />
+              <Card data={lastFmData} />
+              <Card data={lastFmData} />
+            </div>
           </div>
         </div>
       </div>
