@@ -202,7 +202,17 @@ def collect_scrobbles(
                 logger.exception(f"Failed to fetch page {page} for user {username}")
                 continue
 
+
+            if _page_response['recenttracks']['track'] == []:
+                logger.debug("empty result, breaking the loop.")
+                break
+            
             for track in _page_response["recenttracks"]["track"]:
+                
+                
+                if isinstance(track, str):
+                    logger.debug("skipping track as it is a string rather then an object.")
+                    continue
                 if track.get("date", None) is None:
                     logger.debug(
                         f"Skipping track {track['name']} as it has no scrobble date."
