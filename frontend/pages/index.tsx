@@ -1,5 +1,6 @@
 import Head from "next/head";
 import Image from "next/image";
+import toast, { Toaster } from "react-hot-toast";
 import { useEffect, useState } from "react";
 import styles from "../styles/Home.module.css";
 import Profile from "./components/profile";
@@ -13,39 +14,74 @@ const navigation = [
 export default function Home() {
   const [username, setUsername] = useState("");
   const [queueID, setQueueID] = useState("");
+  const [status, setStatus] = useState({});
   const [lastFmData, setLastFmData] = useState({});
   const [dataLoaded, setDataLoaded] = useState(false);
 
+  async function fetchQueue() {
+    const response = await fetch(`/api/queue/${username}`);
+    console.log(response);
+    const data = await response.json();
+    return data;
+  }
+
+  async function fetchStatus(id: string) {
+    const response = await fetch(`/api/status/${id}`);
+    const data = await response.json();
+    return data;
+  }
+
+  useEffect(() => {
+    if (queueID != "") {
+      setTimeout(() => {
+        console.log("sleeping");
+        fetchStatus(queueID).then((data) => {
+          if (data.status === "SUCCESS") {
+            setQueueID("");
+            setLastFmData(data.result);
+          } else {
+            setQueueID(data.id);
+          }
+        });
+      }, 500);
+    }
+  });
+
   async function handleSubmit(e) {
+    // fuck your types
     e.preventDefault();
 
     console.log("bruh");
 
-    async function fetchQueue() {
-      const response = await fetch(`/api/queue/${username}`);
-      const data = await response.json();
-      return data;
-    }
-
-    async function fetchStatus() {
-      const response = await fetch(`/api/status/${username}`);
-      const data = await response.json();
-      return data;
-    }
-
     const queue = await fetchQueue();
 
-    if (queue.detail.message) {
-      setQueueID(queue.detail.task_id);
-    } else {
-      setQueueID(queue.id);
-    }
+    console.log(queue);
 
-    console.log(queueID);
+    if (queue.status === "PENDING") {
+      setQueueID(queue.id);
+      toast.success("You're in the queue to get analyzed! Please wait.", {});
+    } else if (queue.detail.message) {
+      console.log("Already in the queue, check if it's done.");
+      const checkStatus = await fetchStatus(queue.detail.task_id);
+      if (checkStatus.status === "SUCCESS") {
+        console.log("Their data is done, pull it in!");
+        setQueueID("");
+        setLastFmData(checkStatus.result);
+      } else {
+        console.log("Data not done, deploy toast...");
+        toast.loading("We're still analyzing! Please wait.", {});
+      }
+    } else if (queue.status === "SUCCESS") {
+      const checkStatus = await fetchStatus(queue.detail.task_id);
+      console.log(checkStatus);
+      setQueueID("");
+      setLastFmData(queue.result);
+    }
   }
 
   return (
     <main>
+      <Toaster />
       <div className="m-auto max-w-3xl px-4 sm:px-0 space-y-4">
         {/* <div className="m-4 rounded-xl bg-[#ef233c]">
           <div className="rounded-2xl py-3 px-3 sm:px-6 lg:px-8">
@@ -87,9 +123,9 @@ export default function Home() {
           </label>
           <div className="mt-1">
             <form
-              onSubmit={handleSubmit}
               className="
             flex space-x-2"
+              onSubmit={handleSubmit}
             >
               <input
                 type="text"

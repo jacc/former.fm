@@ -12,5 +12,6 @@ export default async function handler(
   const { username } = req.query;
   const queue = await fetch(`https://josh.ms7m.me/celery/fetch/${username}`);
   const queueJson = await queue.json();
+  console.log(queueJson);
   res.status(200).json(queueJson);
 }
