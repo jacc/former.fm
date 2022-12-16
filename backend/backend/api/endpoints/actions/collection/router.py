@@ -20,9 +20,12 @@ async def easy_start_user_collection(username_to_fetch: str):
             username_to_fetch
         )  # type: bytes
         if _check_if_task_already_running:
+            logger.debug("user already has a task running")
             set_task_id = _check_if_task_already_running.decode("utf-8")
         else:
+            logger.debug("user has no task running")
             set_task_id = collect_scrobbles.delay(username=username_to_fetch).id
+            await redis.set(username_to_fetch, str(set_task_id))
     except Exception:
         logger.exception(f"Unable to start/check task for user: {username_to_fetch}")
         raise HTTPException(status_code=500, detail="There was a problem")
