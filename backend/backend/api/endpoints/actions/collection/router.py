@@ -9,12 +9,29 @@ from .response import (
 )
 from backend.models.progress import CompletedCeleryResult
 from backend.background.configuration.celery_configuration import background
+from backend.database.processed_endpoints.asyncio import SavedDataInformationDB
 
 router = APIRouter(prefix="/collection", tags=["Collection related"])
 
 
 @router.get("/easy/start/{username_to_fetch}", response_model=CompletedCeleryResult)
-async def easy_start_user_collection(username_to_fetch: str):
+async def easy_start_user_collection(username_to_fetch: str, fresh: bool = False):
+    
+    
+    if not fresh:
+        try:
+            _fetch_from_mongo = await SavedDataInformationDB.find_one(
+                {
+                    "username": username_to_fetch
+                }
+            )
+            if _fetch_from_mongo:
+                return CompletedCeleryResult(
+                    task_id="none", status="SUCCESS", result=_fetch_from_mongo.data
+                )
+        except Exception:
+            logger.exception(f"Unable to fetch from mongo for user: {username_to_fetch} -- pulling fresh")
+    
     try:
         _check_if_task_already_running = await redis.get(
             username_to_fetch
