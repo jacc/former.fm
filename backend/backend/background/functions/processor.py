@@ -266,12 +266,6 @@ def collect_scrobbles(
     )
 
     if process_immediately_after:
-        try:
-            _redis.delete(username)
-        except Exception:
-            logger.critical(
-                f"Unable to delete redis key {username} -- this may cause users being unable to reprocess their data."
-            )
         logger.debug(
             f"Processing scrobbles for user {username} immediately after collection"
         )
@@ -295,6 +289,13 @@ def collect_scrobbles(
             )
         except Exception:
             logger.exception("unable to save to disk result")
+            
+        try:
+            _redis.delete(username)
+        except Exception:
+            logger.critical(
+                f"Unable to delete redis key {username} -- this may cause users being unable to reprocess their data."
+            )
         return {
             "status": "processed",
             "data": _processed_scrobbles,
