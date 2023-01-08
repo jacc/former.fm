@@ -41,6 +41,7 @@ class OptionalTaskMetaInformation(BaseModel):
     tracks_collected_so_far: typing.Optional[int]
     task_started_at: typing.Optional[str]
     estimated_tracks_to_collect: typing.Optional[int]
+    message: typing.Optional[str]
 
 
 class MetaState(BaseModel):
@@ -59,11 +60,28 @@ class UnprocessedLastFmTrackResponse(BaseModel):
     data: typing.Dict[str, UnprocessedLastFmScrobbles]
 
 
+class CachedProcessedlastFMTrackResponse(ProcessedLastFmTrackResponse):
+    status: typing.Literal["cached"] = "cached"
+
+
+# wtf am i doing here -- TODO: Simplify
 class CompletedCeleryResult(BaseModel):
     task_id: str
     status: CeleryTasks
     result: typing.Optional[
         typing.Union[
-            MetaState, ProcessedLastFmTrackResponse, UnprocessedLastFmTrackResponse
+            typing.Dict[
+                str,
+                typing.Union[
+                    MetaState,
+                    ProcessedLastFmTrackResponse,
+                    UnprocessedLastFmTrackResponse,
+                    LastFmTrack,
+                ],
+            ],
+            MetaState,
+            ProcessedLastFmTrackResponse,
+            UnprocessedLastFmTrackResponse,
+            CachedProcessedlastFMTrackResponse,
         ]
     ]
