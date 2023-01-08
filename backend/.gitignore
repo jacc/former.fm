@@ -163,3 +163,4 @@ cython_debug/
 
 # other
 backend/background/functions/shared/api_keys.json
+.DS_Store
