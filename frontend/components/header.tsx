@@ -11,7 +11,7 @@ export default function Header() {
       </div>
       <img
         src="https://m.media-amazon.com/images/I/519LwTN9hqL._SY1000_.jpg"
-        className="absolute -top-[100px] -left-[100px] w-[500px] object-cover object-center rounded-2xl blur-3xl saturate-75 -z-0 select-none pointer-events-none"
+        className="absolute -top-[50px] -left-[100px] w-[500px] object-cover object-center rounded-2xl blur-3xl saturate-75 -z-0 select-none pointer-events-none"
       />
     </div>
   );
