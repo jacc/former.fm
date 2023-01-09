@@ -76,9 +76,9 @@ def _generate_meta_state(
 @background.task(base=HttpClientBase)
 def collect_scrobbles(
     username: str,
+    limit_page_collections: int  = None,
+    limit_page_fetch_total_count_of_tracks: int = None,
     process_immediately_after: bool = True,
-    limit_page_collections: int = 1,
-    limit_page_fetch_total_count_of_tracks: int = 10,
 ) -> dict:
     _http = collect_scrobbles.http  # type: httpx.Client
     _redis = collect_scrobbles.redis  # type: redis.Redis
@@ -161,9 +161,14 @@ def collect_scrobbles(
         )
 
         if limit_page_collections is not None:
-            _page_amount_to_collect = len(pages)
-        else:
+            logger.debug(f"Limiting page collections to {limit_page_collections}")
             _page_amount_to_collect = limit_page_collections
+        else:
+            logger.debug(
+                f"No page collection limit set, collecting all pages: {len(pages)}"
+            )
+            _page_amount_to_collect = len(pages)
+
         for page in pages[:_page_amount_to_collect]:
             time.sleep(random.uniform(0.5, 1.5))
             try:
@@ -202,16 +207,16 @@ def collect_scrobbles(
                 logger.exception(f"Failed to fetch page {page} for user {username}")
                 continue
 
-
-            if _page_response['recenttracks']['track'] == []:
+            if _page_response["recenttracks"]["track"] == []:
                 logger.debug("empty result, breaking the loop.")
                 break
-            
+
             for track in _page_response["recenttracks"]["track"]:
-                
-                
+
                 if isinstance(track, str):
-                    logger.debug("skipping track as it is a string rather then an object.")
+                    logger.debug(
+                        "skipping track as it is a string rather then an object."
+                    )
                     continue
                 if track.get("date", None) is None:
                     logger.debug(
@@ -272,7 +277,8 @@ def collect_scrobbles(
         _processed_scrobbles = _process_scrobbles(_current_data)
 
         try:
-
+            # For some reason, this block doesn't save.. Figure out why.
+            """
             SavedDataInformationDB.find_one({"username": username}).update(
                 Set(
                     {
@@ -287,9 +293,35 @@ def collect_scrobbles(
                     time=arrow.utcnow().isoformat(),
                 ),
             )
+            """
+            _check_if_user_exists = SavedDataInformationDB.find_one(
+                {"username": username}
+            ).run()
+            if not _check_if_user_exists:
+                logger.debug(
+                    f"User {username} does not exist in database, creating new entry."
+                )
+                SavedDataInformationDB(
+                    username=username,
+                    data=_processed_scrobbles,
+                    status="processed",
+                    time=arrow.utcnow().isoformat(),
+                ).save()
+            else:
+                logger.debug(f"Updating user {username} in database.")
+                SavedDataInformationDB.find_one({"username": username}).update(
+                    Set(
+                        {
+                            SavedDataInformationDB.data: _processed_scrobbles,
+                            SavedDataInformationDB.status: "processed",
+                            SavedDataInformationDB.time: arrow.utcnow().isoformat(),
+                        }
+                    ),
+                )
+
         except Exception:
             logger.exception("unable to save to disk result")
-            
+
         try:
             _redis.delete(username)
         except Exception:
@@ -302,7 +334,7 @@ def collect_scrobbles(
         }
     else:
         try:
-
+            logger.debug(f"Saving data for user {username} to database")
             SavedDataInformationDB.find_one({"username": username}).update(
                 Set(
                     {
@@ -317,6 +349,7 @@ def collect_scrobbles(
                     time=arrow.utcnow().isoformat(),
                 ),
             )
+            logger.debug(f"Updated information for user {username} in database")
         except Exception:
             logger.exception("unable to save to disk result")
         return {

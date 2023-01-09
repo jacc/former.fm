@@ -26,9 +26,9 @@ async def root():
 
 @app.on_event("startup")
 async def startup():
-    init_beanie(
+    await init_beanie(
         database=AsyncIOMotorClient()["formerfm"],
-        document_models=SavedDataInformationDB,
+        document_models=[SavedDataInformationDB],
     )
 
 

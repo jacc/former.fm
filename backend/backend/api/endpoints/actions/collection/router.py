@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from backend.background.functions.processor import collect_scrobbles
 from backend.api.depends.prevent_duplication import block_duplicate_requests, redis
 from loguru import logger
@@ -7,30 +7,41 @@ from .response import (
     StopUserCollectionResponse,
     UserAlreadyCollectingResponse,
 )
-from backend.models.progress import CompletedCeleryResult
+import asyncio
+from backend.models.check_user_endpoint import CheckUserProcessed
+from backend.models.progress import (
+    CompletedCeleryResult,
+    CachedProcessedlastFMTrackResponse,
+)
 from backend.background.configuration.celery_configuration import background
 from backend.database.processed_endpoints.asyncio import SavedDataInformationDB
+from backend.api.depends.prevent_duplication import _base_duplicate_requests
 
 router = APIRouter(prefix="/collection", tags=["Collection related"])
 
 
 @router.get("/easy/start/{username_to_fetch}", response_model=CompletedCeleryResult)
 async def easy_start_user_collection(username_to_fetch: str, fresh: bool = False):
-    
-    
+
     if not fresh:
         try:
             _fetch_from_mongo = await SavedDataInformationDB.find_one(
-                {
-                    "username": username_to_fetch
-                }
+                {"username": username_to_fetch}
             )
             if _fetch_from_mongo:
                 return CompletedCeleryResult(
-                    task_id="none", status="SUCCESS", result=_fetch_from_mongo.data
+                    task_id="none",
+                    status="SUCCESS",
+                    result=CachedProcessedlastFMTrackResponse(
+                        data=_fetch_from_mongo.data
+                    ),
                 )
+            else:
+                logger.debug("No data found in mongo for user: {username_to_fetch}")
         except Exception:
-            logger.exception(f"Unable to fetch from mongo for user: {username_to_fetch} -- pulling fresh")
+            logger.exception(
+                f"Unable to fetch from mongo for user: {username_to_fetch} -- pulling fresh"
+            )
     
     try:
         _check_if_task_already_running = await redis.get(
@@ -111,3 +122,42 @@ async def stop_user_collection(username_to_fetch: str):
         raise HTTPException(
             status_code=500, detail="There was a problem with stopping the collection"
         )
+
+
+@router.get("/check/{username}", response_model=CheckUserProcessed)
+async def check_if_user_already_processed_in_cache(username: str, response: Response):
+
+    try:
+        _user_undergoing_processing, _user_in_cache = await asyncio.gather(
+            _base_duplicate_requests(username),
+            SavedDataInformationDB.find_one({"username": username}),
+        )
+    except Exception:
+        pass
+
+    if _user_in_cache and _user_undergoing_processing:
+        response.status_code = 201
+        return CheckUserProcessed(
+            status="cached_and_processing",
+            message="This account is currently going through processing -- The data you may view may be slighly out of date.",
+        )
+
+    if not _user_undergoing_processing and _user_in_cache:
+        response.status_code = 200
+        return CheckUserProcessed(
+            status="cached",
+            message="This account is currently cached, and is not going through processing.",
+        )
+
+    if _user_undergoing_processing and not _user_in_cache:
+        response.status_code = 201
+        return CheckUserProcessed(
+            status="processing",
+            message="This account is currently going through processing. No data is currently available.",
+        )
+
+    response.status_code = 404
+    return CheckUserProcessed(
+        status="not_cached",
+        message="This account is not currently cached, and is not going through processing.",
+    )
