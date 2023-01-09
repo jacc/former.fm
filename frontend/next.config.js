@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
+  reactStrictMode: false,
   swcMinify: true,
   images: {
     remotePatterns: [
@@ -9,7 +9,6 @@ const nextConfig = {
         hostname: "i1.sndcdn.com",
         port: "",
       },
-    
     ],
   },
 };

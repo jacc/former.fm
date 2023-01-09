@@ -6,6 +6,7 @@ import styles from "../styles/Home.module.css";
 import Profile from "../components/profile";
 import Card from "../components/notification";
 import Header from "../components/header";
+import SearchBar from "../components/search";
 const navigation = [
   { name: "Solutions", href: "#" },
   { name: "Pricing", href: "#" },
@@ -69,10 +70,15 @@ export default function Home() {
   }
 
   return (
-    <>
-      <main className="min-h-screen bg-[#121212] p-4">
-        <Header />
-      </main>
-    </>
+    <main className="bg-[#121212] p-4">
+      <Header />
+      <div className="mx-auto flex h-screen max-w-2xl px-4 sm:px-0">
+        <div className="m-auto">
+          <div className="flex justify-center">
+            <SearchBar />
+          </div>
+        </div>
+      </div>
+    </main>
   );
 }
