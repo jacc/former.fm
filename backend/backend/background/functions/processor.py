@@ -76,8 +76,8 @@ def _generate_meta_state(
 @background.task(base=HttpClientBase)
 def collect_scrobbles(
     username: str,
-    limit_page_collections: int,
-    limit_page_fetch_total_count_of_tracks: int,
+    limit_page_collections: int  = None,
+    limit_page_fetch_total_count_of_tracks: int = None,
     process_immediately_after: bool = True,
 ) -> dict:
     _http = collect_scrobbles.http  # type: httpx.Client
