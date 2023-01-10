@@ -3,7 +3,7 @@ export default function Header() {
     <div className="flex items-center justify-between px-4 py-6 sm:px-6">
       <div className="flex items-center flex-1">
         <div className="flex items-center z-10">
-          <span className="hover:text-white transition ease-in-out text-white/50 text-xl font-bold">
+          <span className="hover:text-white transition ease-in-out text-white/50 text-xl font-bold cursor-default">
             former
           </span>
           <span className="text-white text-xl font-bold">.fm</span>
