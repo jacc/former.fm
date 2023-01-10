@@ -77,9 +77,10 @@ export default function SearchBar() {
               className="bg-[#DD1A22] hover:bg-[#DD1A22] text-white rounded-xl p-4 focus:outline-none focus:ring-2 focus:ring-[#DD1A22] focus:transition focus:ease-out focus:border-transparent"
               type="submit"
             >
+              {/* Arrow SVG */}
               <svg
                 className="h-6 w-6 lg:block hidden"
-                style={{ display: loading ? "none" : "block" }}
+                style={{ display: loading ? "none" : "block" }} // TODO: Hide the arrow on responsive UI. Dont show that shit at all
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
@@ -92,6 +93,7 @@ export default function SearchBar() {
                   d="M10 19l-7-7m0 0l7-7m-7 7h18"
                 />
               </svg>
+              {/* Loading SVG */}
               <svg
                 aria-hidden="true"
                 className="w-6 h-6 text-gray-200 animate-spin dark:text-white fill-black"
